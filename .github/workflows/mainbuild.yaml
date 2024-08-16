@@ -1,5 +1,5 @@
 ---
-    name: PR build
+    name: main build
     on:
       push:
         branches:
