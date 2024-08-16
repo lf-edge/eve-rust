@@ -1,0 +1,49 @@
+---
+    name: PR build
+    on:
+      pull_request_target:
+        paths-ignore:
+          - '.github/workflows/**'
+        branches:
+          - "main"
+      push:
+        branches:
+        - "main"
+        
+    
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        strategy:
+          fail-fast: false
+        steps:
+        - name: Starting Report
+          run: |
+              echo Git Ref: ${{ github.event.pull_request.head.ref  }}
+              echo GitHub Event: ${{ github.event_name }}
+              echo Disk usage
+              df -h
+              echo Memory
+              free -m
+        - uses: actions/checkout@v4
+          with:
+            repository: ${{ github.event.pull_request.head.repo.full_name }}
+            ref: ${{ github.event.pull_request.head.ref }}
+            fetch-depth: 0
+        - name: Set up QEMU
+          uses: docker/setup-qemu-action@v3
+        - name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v3
+        - uses: docker/build-push-action@v5
+          with:
+            context: .
+            platforms: linux/amd64,linux/arm64
+            push: false
+            tags: |
+              ${{ github.event.pull_request.head.repo.full_name }}:${{ github.event.pull_request.head.ref }}
+              ${{ github.event.pull_request.head.repo.full_name }}:latest
+  

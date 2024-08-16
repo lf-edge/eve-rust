@@ -1,0 +1,55 @@
+name: release
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+    paths-ignore:
+      - '.github/workflows/**'
+
+env:
+  OCIREPO: lfedge/eve-rust
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Get rust version
+      id: rust_version
+      run: |
+        RUST_VERSION=$(awk  -F= '/ARG RUST_VERSION/ {print $2}' Dockerfile)
+        # make sure we got a rust version
+        if [ -z "$RUST_VERSION" ]; then
+          echo "Failed to get RUST_VERSION"
+          exit 1
+        fi
+        # strip off any potential eve-specific extensions to the tag
+        TAG="${{ github.ref_name }}"
+        TAG="${TAG%%-*}"
+        if [ "$TAG" != "$RUST_VERSION" ]; then
+          echo "Tag $TAG does not match RUST_VERSION $RUST_VERSION"
+          exit 1
+        fi
+        echo "::set-output name=RUST_VERSION::$RUST_VERSION"
+    - name: Login to Docker Hub
+      if: ${{ github.event.repository.full_name }} == 'lf-edge/eve-rust'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.RELEASE_DOCKERHUB_ACCOUNT }}
+        password: ${{ secrets.RELEASE_DOCKERHUB_TOKEN }}
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ${{ env.OCIREPO }}:${{ steps.rust_version.outputs.RUST_VERSION }}
+          ${{ env.OCIREPO }}:latest

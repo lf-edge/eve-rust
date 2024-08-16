@@ -72,3 +72,6 @@ as an already-released image of `eve-rust`, we will append a patch version to th
 is released, and we need to add a new cargo plugin or build target, we will release `eve-rust:1.80.1-1`, where `-1` is
 the sequential `eve-rust` patch version. This will be very short-lived, only as long as we need to get to the next
 version of rust.
+
+New versions are released to Docker Hub by adding a tag, e.g. `1.80.1` or `1.80.1-1`. The GitHub Actions workflow
+checks that it matches the version in the Dockerfile, and if it does not, it will fail the build.
