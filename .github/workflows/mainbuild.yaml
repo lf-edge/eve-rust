@@ -1,0 +1,38 @@
+---
+    name: PR build
+    on:
+      push:
+        branches:
+        - "main"
+        
+    
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        strategy:
+          fail-fast: false
+        steps:
+        - name: Starting Report
+          run: |
+              echo Git Ref: ${{ github.event.head_commit.id }}
+              echo GitHub Event: ${{ github.event_name }}
+              echo Disk usage
+              df -h
+              echo Memory
+              free -m
+        - uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+        - name: Set up QEMU
+          uses: docker/setup-qemu-action@v3
+        - name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v3
+        - uses: docker/build-push-action@v5
+          with:
+            context: .
+            platforms: linux/amd64,linux/arm64
+            push: false
+            tags: |
+              ${{ github.event.repository.full_name }}:${{ github.event.head_commit.id }}
+              ${{ github.event.repository.full_name }}:latest
+  

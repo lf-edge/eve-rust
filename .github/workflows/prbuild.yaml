@@ -6,9 +6,6 @@
           - '.github/workflows/**'
         branches:
           - "main"
-      push:
-        branches:
-        - "main"
         
     
     concurrency:
