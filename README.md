@@ -1,11 +1,16 @@
 # eve-rust
 
-Base image for building rust-based executables in containers for the EVE platform. Contains the baic rust binaries
+Base image for building rust-based executables in containers for the EVE platform. Contains the basic rust binaries
 such as `rustc`, `cargo`, `rustup`, etc., as well as additional plugins and targets. As of this writing:
 
 * `cargo-chef` - a tool for building and caching dependencies for a rust project
 * `cargo-sbom` - a tool for generating SBoMs for rust-based projects
 * targets to build for linux amd64, arm64 and riscv64 on linux for both musl and glibc
+
+The image also includes additional tools to support cross-compilation
+
+* `mold` - a very fast linker for cross-compilation targets
+* `clang` - to invoke `mold` for cross-compilation targets
 
 ## Usage
 
@@ -57,6 +62,47 @@ WORKDIR /src/foo
 RUN cargo build --release
 RUN cargo sbom > sbom.spdx.json
 ```
+
+To enable cross-compilation we need few extra steps. By default cargo builds for host platform so the target must be specified explicitly either using `--target <target>` or by setting `CARGO_BUILD_TARGET` environment variable. See [Cargo docs](https://doc.rust-lang.org/cargo/reference/environment-variables.html?highlight=CARGO_BUILD_TARGET#configuration-environment-variables)
+
+```Dockerfile
+# we use host tools to avoid emulation and slow builds
+FROM --platform=$BUILDPLATFORM lfedge/eve-rust:1.80.1 AS rust-host
+ARG TARGETARCH
+
+# map Docker's $TARGETARCH to Rust target
+FROM rust-host AS target-amd64
+ENV CARGO_BUILD_TARGET="x86_64-unknown-linux-musl"
+
+FROM rust-host AS target-arm64
+ENV CARGO_BUILD_TARGET="aarch64-unknown-linux-musl"
+
+FROM rust-host AS target-riscv64
+ENV CARGO_BUILD_TARGET="riscv64gc-unknown-linux-gnu"
+
+FROM target-$TARGETARCH AS rust
+
+ADD https://github.com/foo/bar.git#v1.2.3 /src/foo
+WORKDIR /src/foo
+
+# invoke you build here e.g. cargo build --release
+
+# cargo creates a subdirectory /<your app>/target/$CARGO_BUILD_TARGET
+# copy build artifacts to a common place to avoid passing extra ARG to following
+# stage that doesn't inherit the environment
+RUN cp /src/foo/target/$CARGO_BUILD_TARGET/release/foo /src/foo/target/release/foo
+
+
+FROM lfedge/eve-alpine:1f7685f95a475c6bbe682f0b976f12180b6c8726 AS build
+# do the rest of your regular eve-alpine work
+
+COPY --from=rust /src/foo/target/release/foo /out/foo
+
+FROM scratch
+
+COPY --from=build /out/ /
+```
+
 
 ## Supported platforms
 
