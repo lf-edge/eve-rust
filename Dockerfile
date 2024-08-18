@@ -4,5 +4,7 @@ ENV TARGETS="x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-unknown
 RUN rustup target add ${TARGETS}
 
 # needed for cargo-chef and cargo-sbom, as well as many other compilations
-RUN apk add musl-dev linux-headers make
-RUN cargo install cargo-chef@0.1.67 cargo-sbom@0.9.1
+RUN apk add musl-dev linux-headers make clang mold
+RUN cargo install cargo-chef cargo-sbom
+# we define target specific rustc flags for cross-compilation
+ADD config.toml /usr/local/cargo/
