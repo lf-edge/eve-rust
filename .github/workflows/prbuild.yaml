@@ -41,6 +41,5 @@
             platforms: linux/amd64,linux/arm64
             push: false
             tags: |
-              ${{ github.event.pull_request.head.repo.full_name }}:${{ github.event.pull_request.head.ref }}
               ${{ github.event.pull_request.head.repo.full_name }}:latest
   
