@@ -58,6 +58,24 @@ RUN cargo build --release
 RUN cargo sbom > sbom.spdx.json
 ```
 
+## Supported platforms
+
+This image is built for linux/amd64 and linux/arm64. riscv64 is
+not supported _yet_ as a host platform, and therefore no image is released for riscv64.
+When rust on alpine is fully ready, it will be added, likely with alpine 3.21.
+
+Supported target platforms are listed in the [Dockerfile](./Dockerfile#L3). As of this writing, these
+are:
+
+* x86_64-unknown-linux-musl
+* aarch64-unknown-linux-musl
+* x86_64-unknown-linux-gnu
+* aarch64-unknown-linux-gnu
+* riscv64gc-unknown-linux-gnu
+
+Note that riscv64 is supported gnu only, not musl, and so is not usable on Alpine-based systems
+without first installing glibc. This, too, will be fixed when rust on alpine is fully ready.
+
 ## Versioning
 
 The version of this image is the version of the rust toolchain it contains. This makes it easy to know what
