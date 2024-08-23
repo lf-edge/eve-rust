@@ -29,7 +29,7 @@ ENV TARGETS="x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-unknown
 RUN rustup target add ${TARGETS}
 
 # needed for cargo-chef and cargo-sbom, as well as many other compilations
-RUN apk add musl-dev linux-headers make clang mold
+RUN apk add musl-dev linux-headers make clang mold python3
 
 # copy the cargo plugins from the tools stage
 COPY --from=tools /cargo-cross /usr/local/cargo
