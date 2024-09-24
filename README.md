@@ -63,6 +63,34 @@ RUN cargo build --release
 RUN cargo sbom > sbom.spdx.json
 ```
 
+## SBoM
+
+All EVE packages **must** have an SBoM. When the packages are built using `linuxkit pkg build`, which
+itself calls buildkit, the SBoM is automatically generated and included in the package. It only scans the
+final stage of the image. In the case of rust-generated binaries, the final binary does **not**
+contain any information about dependencies, so the SBoM must be generated manually.
+
+When building a package, you must:
+
+1. Generate the sbom using `cargo sbom > sbom.spdx.json`
+1. Copy the `sbom.spdx.json` into the final image
+
+Hence, the following are **mandatory** stages:
+
+```Dockerfile
+# in the build stage FROM eve-rust, before or after `cargo build`
+RUN cargo sbom > target/sbom.spdx.json
+
+# in the final FROM scratch stage
+COPY --from=rust /src/foo/target/sbom.spdx.json /sbom.spdx.json
+```
+
+The above will go away when the sbom generation is a built-in part of cargo,
+to be enabled by configuration. See [this RFC](https://github.com/rust-lang/rfcs/pull/3553).
+
+
+## Cross-compilation
+
 To enable cross-compilation we need few extra steps. By default cargo builds for host platform so the target must be specified explicitly either using `--target <target>` or by setting `CARGO_BUILD_TARGET` environment variable. See [Cargo docs](https://doc.rust-lang.org/cargo/reference/environment-variables.html?highlight=CARGO_BUILD_TARGET#configuration-environment-variables)
 
 ```Dockerfile
