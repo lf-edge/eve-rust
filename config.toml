@@ -17,7 +17,7 @@ rustflags = [
 ]
 
 # FIXME: riscv64 is not yet available in rust:1.80.1-alpine3.20
-# but both clang and mold support it. Alos musl-dev is available in Alpine 3.20
+# but both clang and mold support it. Also musl-dev is available in Alpine 3.20
 # [target.riscv64gc-unknown-linux-gnu]
 # linker = "/usr/bin/clang"
 # rustflags = [
