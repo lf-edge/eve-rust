@@ -1,4 +1,4 @@
-ARG RUST_VERSION=1.84.1
+ARG RUST_VERSION=1.85.1
 FROM --platform=$BUILDPLATFORM rust:${RUST_VERSION}-alpine3.20 AS tools-host
 ARG BUILDPLATFORM
 ARG TARGETARCH
@@ -21,7 +21,7 @@ RUN echo "Cargo target: $CARGO_BUILD_TARGET"
 
 ADD config.toml /usr/local/cargo/
 # CARGO_BUILD_TARGET is respected by cargo install and other cargo commands
-RUN cargo install --root /cargo-cross cargo-chef@0.1.67 cargo-sbom@0.9.1
+RUN cargo install --root /cargo-cross cargo-chef@0.1.71 cargo-sbom@0.9.1
 
 
 FROM rust:${RUST_VERSION}-alpine3.20 AS tools-target-base
@@ -29,7 +29,7 @@ ENV TARGETS="x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-unknown
 RUN rustup target add ${TARGETS}
 
 # needed for cargo-chef and cargo-sbom, as well as many other compilations
-RUN apk add musl-dev linux-headers make clang mold python3 git
+RUN apk add musl-dev linux-headers make clang mold python3 git perl protoc
 
 # copy the cargo plugins from the tools stage
 COPY --from=tools /cargo-cross /usr/local/cargo
