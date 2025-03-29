@@ -12,8 +12,10 @@ env:
 
 jobs:
   build_and_push:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
+      matrix:
+        os: [ubuntu-latest]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
