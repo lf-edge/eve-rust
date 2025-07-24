@@ -29,7 +29,18 @@ ENV TARGETS="x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-unknown
 RUN rustup target add ${TARGETS}
 
 # needed for cargo-chef and cargo-sbom, as well as many other compilations
-RUN apk add musl-dev linux-headers make clang mold python3 git perl protoc
+RUN apk add musl-dev linux-headers make clang llvm lld mold python3 git perl protoc
+
+ENV PATH=/usr/lib/llvm/bin:$PATH
+# export cross-compilation vars for both musl targets
+ENV CC_aarch64_unknown_linux_musl=clang \
+    CFLAGS_aarch64_unknown_linux_musl="--target=aarch64-unknown-linux-musl" \
+    AR_aarch64_unknown_linux_musl=llvm-ar \
+    RANLIB_aarch64_unknown_linux_musl=llvm-ranlib \
+    CC_x86_64_unknown_linux_musl=clang \
+    CFLAGS_x86_64_unknown_linux_musl="--target=x86_64-unknown-linux-musl" \
+    AR_x86_64_unknown_linux_musl=llvm-ar \
+    RANLIB_x86_64_unknown_linux_musl=llvm-ranlib
 
 # copy the cargo plugins from the tools stage
 COPY --from=tools /cargo-cross /usr/local/cargo
