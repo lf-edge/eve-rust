@@ -1,0 +1,16 @@
+FROM mikemzed/eve-rust:1.80.1-alpine-3.20-cross-5 AS rust
+
+ADD . /test
+WORKDIR /test
+
+# tools already in place
+RUN cargo build --release
+RUN cargo sbom > sbom.spdx.json
+
+FROM lfedge/eve-alpine:1f7685f95a475c6bbe682f0b976f12180b6c8726 AS build
+RUN apk add file busybox bash
+# do the rest of your regular eve-alpine work
+
+COPY --from=rust /test/target/release/test-native-comile /out/test-native-comile
+
+# do not do FROM scratch here. We need 'file' and 'shell' to validate the image
