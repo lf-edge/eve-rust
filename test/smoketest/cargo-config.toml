@@ -1,0 +1,15 @@
+# Shape matches what real consumers (e.g. EVE's pkg/vector) use: profile
+# settings plus per-cfg rustflags that merge with the base image's
+# [target.<triple>] entries in /usr/local/cargo/config.toml.
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+strip = "symbols"
+
+[target.'cfg(target_env = "musl")']
+rustflags = [
+    "-C", "embed-bitcode=yes",
+    "-A", "dead_code",
+]

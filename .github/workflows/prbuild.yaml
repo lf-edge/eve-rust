@@ -1,23 +1,32 @@
 ---
 name: PR build
 on:
-  pull_request_target:
+  pull_request:
     paths-ignore:
       - ".github/workflows/**"
     branches:
       - "main"
 
+# This workflow does not push or consume any secrets, so `pull_request`
+# (not `pull_request_target`) is appropriate: fork PRs still build but
+# their GITHUB_TOKEN is read-only and secrets aren't exposed, which
+# matters because the smoketest job runs a script from the PR tree.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+env:
+  # PR-scoped local image tag used by the smoketest job after hydrating
+  # from the GHA buildx cache written by the build job.
+  CI_IMAGE: eve-rust-ci:pr-${{ github.event.pull_request.number }}
+
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-      fail-fast: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Starting Report
         run: |
@@ -29,17 +38,51 @@ jobs:
           free -m
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
       - name: Set up QEMU
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4.0.0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+      # Validates the Dockerfile builds for both host arches, and populates
+      # the GHA buildx cache that the smoketest job rehydrates from. The
+      # tag is purely local — nothing pushes or loads this image.
       - uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294  # v7.0.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: |
-            ${{ github.event.pull_request.head.repo.full_name }}:latest
+          tags: eve-rust-ci:multiarch
+          cache-to: type=gha,mode=max
+          cache-from: type=gha
+
+  smoketest:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4.0.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+      # Pull the amd64 image from the GHA cache written by the build job
+      # and load it into the local docker daemon so `docker run` in run.sh
+      # can see it. All layers are cache hits — this step is effectively
+      # just the --load export.
+      - name: Hydrate eve-rust image from build cache
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294  # v7.0.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.CI_IMAGE }}
+          cache-from: type=gha
+      # Regression test: cross-compile the smoketest crate for each supported
+      # musl target, assert ELF arch, then run each binary under qemu-user.
+      # Catches silent cross-compile breakage of the kind we hit enabling
+      # riscv64 (wrong-arch libc picked up from host /usr/lib, tier-3 target
+      # spec missing crt-static-default, etc).
+      - name: Run smoketest
+        env:
+          RUST_IMAGE: ${{ env.CI_IMAGE }}
+        run: ./test/smoketest/run.sh
