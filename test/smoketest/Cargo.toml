@@ -1,0 +1,9 @@
+[package]
+name = "eve-rust-smoketest"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "smoketest"
+path = "src/main.rs"
