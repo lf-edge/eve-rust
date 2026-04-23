@@ -1,28 +1,29 @@
 [target.aarch64-unknown-linux-musl]
 linker = "/usr/bin/clang"
 rustflags = [
-    "-C",
-    "link-arg=--ld-path=/usr/bin/mold",
-    "-C",
-    "link-arg=--target=aarch64-unknown-linux-musl",
+    "-C", "link-arg=--ld-path=/usr/bin/mold",
+    "-C", "link-arg=--target=aarch64-unknown-linux-musl",
+    "-C", "link-self-contained=yes",
 ]
 
 [target.x86_64-unknown-linux-musl]
 linker = "/usr/bin/clang"
 rustflags = [
-    "-C",
-    "link-arg=--ld-path=/usr/bin/mold",
-    "-C",
-    "link-arg=--target=x86_64-unknown-linux-musl",
+    "-C", "link-arg=--ld-path=/usr/bin/mold",
+    "-C", "link-arg=--target=x86_64-unknown-linux-musl",
+    "-C", "link-self-contained=yes",
 ]
 
-# FIXME: riscv64 is not yet available in rust:1.80.1-alpine3.20
-# but both clang and mold support it. Also musl-dev is available in Alpine 3.20
-# [target.riscv64gc-unknown-linux-gnu]
-# linker = "/usr/bin/clang"
-# rustflags = [
-#     "-C",
-#     "link-arg=--ld-path=/usr/bin/mold",
-#     "-C",
-#     "link-arg=--target=riscv64-unknown-linux-musl",
-# ]
+[target.riscv64gc-unknown-linux-musl]
+linker = "/usr/bin/clang"
+# NOTE: riscv64gc-unknown-linux-musl is tier-3 in upstream rustc and its
+# target spec is missing `crt-static-default: true` (which x86_64/aarch64
+# musl have). Without `+crt-static` here, rustc picks the dynamic-unwind
+# path (`-lgcc_s` + `-pie`) instead of static (`-lunwind` + `-static`),
+# and the build fails because there is no riscv64 libgcc_s.so in the image.
+rustflags = [
+    "-C", "link-arg=--ld-path=/usr/bin/mold",
+    "-C", "link-arg=--target=riscv64-unknown-linux-musl",
+    "-C", "link-self-contained=yes",
+    "-C", "target-feature=+crt-static",
+]
